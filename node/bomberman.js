@@ -260,7 +260,7 @@ class Explosion {
     constructor(x, y, strength) {
         this.x = x;
         this.y = y;
-        this.char = '*';
+        this.char = '💥';
         this.strength = strength;
         this.lifetime = 0.5;
 
@@ -299,7 +299,7 @@ class Player {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.char = '@';
+        this.char = '😀';
     }
 
     update(dT) {
@@ -343,7 +343,7 @@ class Enemy {
     constructor(x, y, vertical) {
         this.x = x;
         this.y = y;
-        this.char = 'X';
+        this.char = '😈';
         this.vertical = vertical;
         this.dirY = Math.random() > 0.5 ?  1 : -1;
         this.dirX = 0;
@@ -361,7 +361,16 @@ class Enemy {
                 // if currently moving vertical...
                 if (this.dirX === 0) {
                     // check left and right or fallback to invert the current direction and move back
-                    if (map[this.x + 1][this.y] === TILE_FLOOR) {
+                    // if we can go left AND right throw a coin...
+                    if (map[this.x + 1][this.y] === TILE_FLOOR && map[this.x - 1][this.y] === TILE_FLOOR) {
+                        if (Math.random() < 0.5) {
+                            this.dirX = 1;
+                            this.dirY = 0;
+                        } else {
+                            this.dirX = -1;
+                            this.dirY = 0;
+                        }
+                    } else if (map[this.x + 1][this.y] === TILE_FLOOR) {
                         this.dirX = 1;
                         this.dirY = 0;
                     } else if (map[this.x - 1][this.y] === TILE_FLOOR) {
@@ -373,7 +382,17 @@ class Enemy {
 
                 } else {
                     // check up and down or fallback to invert the current direction and move back
-                    if (map[this.x][this.y + 1] === TILE_FLOOR) {
+                    // if we can go up AND down throw a coin...
+                    if (map[this.x][this.y + 1] === TILE_FLOOR && map[this.x][this.y - 1] === TILE_FLOOR) {
+                        if (Math.random() < 0.5) {
+                            this.dirX = 0;
+                            this.dirY = 1;
+                        } else {
+                            this.dirX = 0;
+                            this.dirY = -1;
+                        }
+                    }
+                    else if (map[this.x][this.y + 1] === TILE_FLOOR) {
                         this.dirX = 0;
                         this.dirY = 1;
                     } else if (map[this.x][this.y - 1] === TILE_FLOOR) {
