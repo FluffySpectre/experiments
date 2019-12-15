@@ -6,7 +6,6 @@ let bombs = [];
 let explosions = [];
 let pickups = [];
 let enemies = [];
-const pickupChance = 0.05;
 let inputMove = [0, 0];
 let inputPlace = false;
 let player;
@@ -87,8 +86,8 @@ const update = () => {
             e.update(deltaTime);
         }
 
-        for (i = 0; i < height; i++) {
-            for (j = 0; j < width; j++) {
+        for (let i = 0; i < height; i++) {
+            for (let j = 0; j < width; j++) {
                 for (let e of explosions) {
                     for (let x = 0; x < 4; x++) {
                         for (let k = 0; k < e.cells[x].length; k++) {
@@ -101,7 +100,7 @@ const update = () => {
                                     map[j][i] = TILE_FLOOR;
 
                                     // drop by a 5% chance a pickup
-                                    if (Math.random() < pickupChance) {
+                                    if (Math.random() < 0.05) {
                                         pickups.push(new Pickup(j, i));
                                     }
 
@@ -150,9 +149,9 @@ const render = () => {
 
     console.log(' Score: ' + score + '\n');
 
-    for (i = 0; i < height; i++) {
+    for (let i = 0; i < height; i++) {
         let row = '';
-        for (j = 0; j < width; j++) {
+        for (let j = 0; j < width; j++) {
             let char = ' ';
             if (map[j][i] === TILE_DESTRUCTIBLE) {
                 char = '░';
@@ -178,12 +177,6 @@ const render = () => {
                 }
             }
 
-            for (let e of enemies) {
-                if (posIsEqual([j, i], [e.x, e.y])) {
-                    char = e.char;
-                }
-            }
-
             for (let e of explosions) {
                 for (let x = 0; x < 4; x++) {
                     for (let k = 0; k < e.cells[x].length; k++) {
@@ -198,6 +191,12 @@ const render = () => {
 
             if (posIsEqual([j, i], [player.x, player.y])) {
                 char = player.char;
+            }
+
+            for (let e of enemies) {
+                if (posIsEqual([j, i], [e.x, e.y])) {
+                    char = e.char;
+                }
             }
 
             row += ' ' + char + ' ';
@@ -218,7 +217,7 @@ const reset = () => {
     bombs = [];
     explosions = [];
     pickups = [];
-    enemies = [new Enemy(13, 4, true), new Enemy(3, 6, true), new Enemy(6, 13, false), new Enemy(7, 7, false)];
+    enemies = [new Enemy(13, 4), new Enemy(3, 6), new Enemy(6, 13), new Enemy(7, 7)];
     explosionRadius = 1;
     gameOver = false;
     win = false;
@@ -340,11 +339,10 @@ class Pickup {
 }
 
 class Enemy {
-    constructor(x, y, vertical) {
+    constructor(x, y) {
         this.x = x;
         this.y = y;
         this.char = '😈';
-        this.vertical = vertical;
         this.dirY = Math.random() > 0.5 ?  1 : -1;
         this.dirX = 0;
         this.stepDelay = 0.65;
