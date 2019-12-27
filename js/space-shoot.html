@@ -1,0 +1,464 @@
+<html>
+
+<head>
+    <style>
+        html,
+        body {
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="game" width="800" height="800"></canvas>
+
+    <script>
+        // UTILITIES
+        function rectContainsPoint(rx, ry, rw, rh, px, py) {
+            return px >= rx && px <= rx + rw && py >= ry && py <= ry + rh;
+        }
+
+        // CLASSES
+        class Vector {
+            constructor(x, y) {
+                this.x = x || 0;
+                this.y = y || 0;
+            }
+
+            add(v) {
+                if (v instanceof Vector) {
+                    this.x += v.x;
+                    this.y += v.y;
+                } else {
+                    this.x += v;
+                    this.y += v;
+                }
+                return this;
+            }
+
+            sub(v) {
+                if (v instanceof Vector) {
+                    this.x -= v.x;
+                    this.y -= v.y;
+                } else {
+                    this.x -= v;
+                    this.y -= v;
+                }
+                return this;
+            }
+
+            mult(v) {
+                if (v instanceof Vector) {
+                    this.x *= v.x;
+                    this.y *= v.y;
+                } else {
+                    this.x *= v;
+                    this.y *= v;
+                }
+                return this;
+            }
+
+            dot(v) {
+                return this.x * v.x + this.y * v.y;
+            }
+
+            mag() {
+                return Math.sqrt(this.dot(this));
+            }
+
+            setMag(newMag) {
+                const currentMag = this.mag();
+                this.x = this.x * newMag / currentMag;
+                this.y = this.y * newMag / currentMag;
+                return this;
+            }
+
+            copy() {
+                return new Vector(this.x, this.y);
+            }
+        }
+
+        class Player {
+            constructor(x, y, fireBehaviour) {
+                this.pos = new Vector(x, y);
+                this.acc = new Vector();
+                this.vel = new Vector();
+                this.fireBehaviour = fireBehaviour;
+                this.fireData = [0, 0, 0, 0];
+                this.firing = false;
+                this.health = 50;
+                this.maxHeath = 50;
+            }
+
+            input(x, y, fire) {
+                this.acc.add(new Vector(x, y));
+                this.firing = fire;
+            }
+
+            update(dT, scrollSpeed, playerBullets, enemyBullets) {
+                this.vel.add(this.acc);
+                this.acc.mult(0);
+                this.pos.add(this.vel);
+
+                // add some friction
+                this.vel.mult(0.9);
+
+                // check bounds
+                if (this.pos.x < 0) this.pos.x = 0;
+                if (this.pos.x > canvas.width - playerWidth) this.pos.x = canvas.width - playerWidth;
+                if (this.pos.y < 0) this.pos.y = 0;
+                if (this.pos.y > canvas.height - playerHeight) this.pos.y = canvas.height - playerHeight;
+
+                // firing
+                if (this.firing) {
+                    this.fireBehaviour(this, dT, scrollSpeed, playerBullets);
+                } else {
+                    this.fireData = [0, 0, 0, 0];
+                }
+
+                for (let b of enemyBullets) {
+                    if (rectContainsPoint(this.pos.x, this.pos.y, playerWidth, playerHeight, b.pos.x, b.pos.y)) {
+                        this.health -= b.damage;
+                        b.remove = true;
+                        if (this.health <= 0) {
+                            this.health = 0;
+                            gameOver = true;
+                        }
+                    }
+                }
+            }
+
+            render() {
+                ctx.fillStyle = 'blue';
+                ctx.fillRect(this.pos.x, this.pos.y, playerWidth, playerHeight);
+            }
+        }
+
+        class EnemyDefinition {
+            constructor(triggerTime, health, offset, moveBehaviour, fireBehaviour) {
+                this.triggerTime = triggerTime;
+                this.health = health;
+                this.offset = offset;
+                this.moveBehaviour = moveBehaviour;
+                this.fireBehaviour = fireBehaviour;
+            }
+        }
+
+        class Enemy {
+            constructor(x, y, def) {
+                this.pos = new Vector(x, y);
+                this.def = def;
+                this.moveData = [0, 0, 0, 0];
+                this.fireData = [0, 0, 0, 0];
+                this.dead = false;
+            }
+
+            update(dT, scrollSpeed, bullets) {
+                this.def.moveBehaviour(this, dT, scrollSpeed);
+                this.def.fireBehaviour(this, dT, scrollSpeed, bullets);
+
+                for (let b of playerBullets) {
+                    if (rectContainsPoint(this.pos.x, this.pos.y, enemyWidth, enemyHeight, b.pos.x, b.pos.y)) {
+                        this.def.health -= b.damage;
+                        b.remove = true;
+                        if (this.def.health <= 0) {
+                            this.dead = true;
+                        }
+                    }
+                }
+            }
+
+            render() {
+                ctx.fillStyle = 'maroon';
+                ctx.fillRect(this.pos.x, this.pos.y, enemyWidth, enemyHeight);
+            }
+        }
+
+        class Bullet {
+            constructor(x, y) {
+                this.pos = new Vector(x, y);
+                this.vel = new Vector();
+                this.remove = false;
+                this.damage = 1;
+                this.color = 'red';
+            }
+
+            update(dT) {
+                const vel = new Vector(this.vel.x, this.vel.y).add(new Vector(0, worldSpeed)).mult(dT);
+                this.pos.add(vel);
+            }
+
+            render() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.pos.x, this.pos.y, 8, 0, Math.PI * 2, true);
+                ctx.fill();
+            }
+        }
+
+        // GLOBALS
+        let canvas = document.getElementById('game');
+        let ctx = canvas.getContext('2d');
+        let lastFrameTime = Date.now();
+        let movementInputX = movementInputY = 0;
+        let fireInput = 0;
+        let worldPos = 0;
+        const worldSpeed = 30;
+        const enemyWidth = 50;
+        const enemyHeight = 80;
+        const playerWidth = 40;
+        const playerHeight = 60;
+        let spawns = [];
+        let player;
+        let enemies = [];
+        let bullets = [];
+        let playerBullets = [];
+        let gameOver = false;
+
+        // setup stars for background
+        let stars = [];
+        for (let i = 0; i < 1000; i++) {
+            stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height });
+        }
+
+        // player firing behaviours
+        const Player_Fire_Straight2 = (player, dT, scrollSpeed, bullets) => {
+            const delay = 0.2;
+
+            player.fireData[0] += dT;
+            if (player.fireData[0] >= delay) {
+                player.fireData[0] -= delay;
+
+                let b = new Bullet(player.pos.x + playerWidth / 2, player.pos.y);
+                b.color = 'yellow';
+                b.vel.y = -500;
+                bullets.push(b);
+            }
+        };
+
+        const Player_Fire_Triple = (player, dT, scrollSpeed, bullets) => {
+            const delay = 0.2;
+
+            player.fireData[0] += dT;
+            if (player.fireData[0] >= delay) {
+                player.fireData[0] -= delay;
+
+                let b = new Bullet(player.pos.x + playerWidth / 2, player.pos.y);
+                b.color = 'yellow';
+                b.vel.y = -500;
+                b.vel.x = -100;
+                bullets.push(b);
+
+                let b2 = new Bullet(player.pos.x + playerWidth / 2, player.pos.y);
+                b2.color = 'yellow';
+                b2.vel.y = -500;
+                bullets.push(b2);
+
+                let b3 = new Bullet(player.pos.x + playerWidth / 2, player.pos.y);
+                b3.color = 'yellow';
+                b3.vel.y = -500;
+                b3.vel.x = 100;
+                bullets.push(b3);
+            }
+        };
+
+        // enemy movement behaviours 
+        const Move_None = (enemy, dT, scrollSpeed) => {
+            const posBefore = enemy.pos.y;
+            enemy.pos.y += scrollSpeed * 3 * dT;
+        };
+        const Move_SinNarrow = (enemy, dT, scrollSpeed) => {
+            enemy.pos.y += scrollSpeed * 3 * dT;
+            enemy.moveData[0] += dT;
+            enemy.pos.x += 80 * Math.cos(enemy.moveData[0]) * dT;
+        };
+        const Move_SinWide = (enemy, dT, scrollSpeed) => {
+            enemy.pos.y += scrollSpeed * 3 * dT;
+            enemy.moveData[0] += dT;
+            enemy.pos.x += 150 * Math.cos(enemy.moveData[0]) * dT;
+        };
+
+        // enemy firing behaviours 
+        const Fire_None = (enemy, dT, scrollSpeed, bullets) => { };
+        const Fire_Straight2 = (enemy, dT, scrollSpeed, bullets) => {
+            const delay = 0.2;
+            enemy.fireData[0] += dT;
+            if (enemy.fireData[0] >= delay) {
+                enemy.fireData[0] -= delay;
+
+                let b = new Bullet(enemy.pos.x + enemyWidth / 2, enemy.pos.y + enemyHeight);
+                b.vel.y = 300;
+                bullets.push(b);
+            }
+        };
+        const Fire_Circle = (enemy, dT, scrollSpeed, bullets) => {
+            const delay = 0.5;
+            const nBullets = 15;
+            const theta = Math.PI * 2.0 / nBullets;
+            enemy.fireData[0] += dT;
+            if (enemy.fireData[0] >= delay) {
+                enemy.fireData[0] -= delay;
+
+                for (let i = 0; i < nBullets; i++) {
+                    let b = new Bullet(enemy.pos.x + enemyWidth / 2, enemy.pos.y + enemyHeight / 2);
+                    b.vel.x = 180.0 * Math.cos(theta * i);
+                    b.vel.y = 180.0 * Math.sin(theta * i);
+                    bullets.push(b);
+                }
+            }
+        };
+
+        function update() {
+            // calculate frame time
+            let deltaTime = (Date.now() - lastFrameTime) / 1000;
+            lastFrameTime = Date.now();
+            if (deltaTime > 1) deltaTime = 1;
+
+            worldPos += worldSpeed * deltaTime;
+
+            for (let s of stars) {
+                s.y += worldSpeed * deltaTime;
+                if (s.y > canvas.height) {
+                    s.x = Math.random() * canvas.width;
+                    s.y = 0;
+                }
+            }
+
+            while (spawns.length > 0 && worldPos >= spawns[0].triggerTime) {
+                let e = new Enemy(
+                    spawns[0].offset * canvas.width - enemyWidth / 2,
+                    0 - enemyHeight,
+                    spawns[0]
+                );
+                spawns.shift();
+                enemies.push(e);
+            }
+
+            player.input(movementInputX, movementInputY, fireInput);
+            player.update(deltaTime, worldSpeed, playerBullets, bullets);
+
+            for (let e of enemies) {
+                e.update(deltaTime, worldSpeed, bullets);
+            }
+
+            for (let b of bullets) {
+                b.update(deltaTime);
+            }
+
+            for (let b of playerBullets) {
+                b.update(deltaTime);
+            }
+
+            // cleanup unneeded entities
+            enemies = enemies.filter(e => e.pos.y < canvas.height && !e.dead);
+            bullets = bullets.filter(b => b.pos.y < canvas.height && b.pos.y > 0 && b.pos.x > 0 && b.pos.y < canvas.width && !b.remove);
+            playerBullets = playerBullets.filter(b => b.pos.y < canvas.height && b.pos.y > 0 && b.pos.x > 0 && b.pos.y < canvas.width && !b.remove);
+
+            // at the end of each update cycle render the current state of the game
+            render();
+        }
+
+        function render() {
+            // clear screen
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // draw the star background
+            ctx.fillStyle = 'white'; // TODO: maybe add some random transparency
+            for (let s of stars) {
+                ctx.fillRect(s.x, s.y, 1, 1);
+            }
+
+            player.render();
+
+            for (let e of enemies) {
+                e.render();
+            }
+
+            for (let b of bullets) {
+                b.render();
+            }
+
+            for (let b of playerBullets) {
+                b.render();
+            }
+
+            // draw ui
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, 24);
+            ctx.font = "24px Arial";
+            ctx.fillStyle = 'white';
+            ctx.fillText('HEALTH:', 0, 22);
+            ctx.fillStyle = 'lime';
+            ctx.fillRect(110, 0, (canvas.width - 110) * (player.health / player.maxHeath), 24);
+
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0,0,0,0.8)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.font = "32px Arial";
+                ctx.fillStyle = 'red';
+                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2);
+                ctx.font = "24px Arial";
+                ctx.fillText('Press "space" to restart', canvas.width / 2, canvas.height / 2 + 40);
+            }
+        }
+
+        function restart() {
+            spawns = [
+                new EnemyDefinition(60, 3, 0.5, Move_None, Fire_Circle),
+                new EnemyDefinition(180, 3, 0.25, Move_SinWide, Fire_Straight2),
+                new EnemyDefinition(180, 3, 0.75, Move_SinWide, Fire_Straight2),
+                new EnemyDefinition(360, 3, 0.2, Move_SinNarrow, Fire_Straight2),
+                new EnemyDefinition(360, 3, 0.5, Move_None, Fire_None),
+                new EnemyDefinition(360, 3, 0.8, Move_SinNarrow, Fire_Straight2),
+            ];
+
+            player = new Player(canvas.width / 2, canvas.height * 0.75, Player_Fire_Triple);
+
+            playerBullets = [];
+            bullets = [];
+            enemies = [];
+            worldPos = 0;
+
+            gameOver = false;
+        }
+
+        // setup input handler
+        document.addEventListener('keydown', (e) => {
+            if (e.which === 37 || e.code === 'KeyA') movementInputX = -1;
+            if (e.which === 38 || e.code === 'KeyW') movementInputY = -1;
+            if (e.which === 39 || e.code === 'KeyD') movementInputX = 1;
+            if (e.which === 40 || e.code === 'KeyS') movementInputY = 1;
+            if (e.which === 32 || e.code === 'Space') {
+                if (gameOver) {
+                    restart();
+                } else {
+                    fireInput = 1;
+                }
+            }
+
+            // DEBUG (to test the firing behaviour swapping mechanism)
+            if (e.code === 'Digit1') {
+                player.fireBehaviour = Player_Fire_Straight2;
+            } else if (e.code === 'Digit2') {
+                player.fireBehaviour = Player_Fire_Triple;
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.which === 37 || e.code === 'KeyA') movementInputX = 0;
+            if (e.which === 38 || e.code === 'KeyW') movementInputY = 0;
+            if (e.which === 39 || e.code === 'KeyD') movementInputX = 0;
+            if (e.which === 40 || e.code === 'KeyS') movementInputY = 0;
+            if (e.which === 32 || e.code === 'Space') fireInput = 0;
+        });
+
+        restart();
+
+        // setup draw loop
+        setInterval(update, 1000 / 30);
+
+    </script>
+</body>
+
+</html>
