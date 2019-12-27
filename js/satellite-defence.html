@@ -1,0 +1,411 @@
+<html>
+
+<head>
+    <style>
+        html,
+        body {
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="game" width="800" height="800"></canvas>
+
+    <script>
+        // UTILITIES
+        function rectContainsPoint(rx, ry, rw, rh, px, py) {
+            return px >= rx && px <= rx + rw && py >= ry && py <= ry + rh;
+        }
+
+        function rectContainsRect(r1x, r1y, r1w, r1h, r2x, r2y, r2w, r2h) {
+            return !(r2x > r1x + r1w || 
+                r2x + r2w < r1x || 
+                r2y > r1y + r1h ||
+                r2y + r2h < r1x);
+        }
+
+        function rectContainsCircle(rx, ry, rw, rh, cx, cy, cr) {
+            var distX = Math.abs(cx - rx - rw / 2);
+            var distY = Math.abs(cy - ry - rh / 2);
+
+            if (distX > (rw / 2 + cr)) { return false; }
+            if (distY > (rh / 2 + cr)) { return false; }
+
+            if (distX <= (rw / 2)) { return true; }
+            if (distY <= (rh / 2)) { return true; }
+
+            var dx = distX - rw / 2;
+            var dy = distY - rh / 2;
+            return (dx * dx + dy * dy <= (cr * cr));
+        }
+
+        function getRandomInt(min, max) {
+            min = Math.ceil(min);
+            max = Math.floor(max);
+            return Math.floor(Math.random() * (max - min)) + min;
+        }
+
+        // CLASSES
+        class Vector {
+            constructor(x, y) {
+                this.x = x || 0;
+                this.y = y || 0;
+            }
+
+            add(v) {
+                if (v instanceof Vector) {
+                    this.x += v.x;
+                    this.y += v.y;
+                } else {
+                    this.x += v;
+                    this.y += v;
+                }
+                return this;
+            }
+
+            sub(v) {
+                if (v instanceof Vector) {
+                    this.x -= v.x;
+                    this.y -= v.y;
+                } else {
+                    this.x -= v;
+                    this.y -= v;
+                }
+                return this;
+            }
+
+            mult(v) {
+                if (v instanceof Vector) {
+                    this.x *= v.x;
+                    this.y *= v.y;
+                } else {
+                    this.x *= v;
+                    this.y *= v;
+                }
+                return this;
+            }
+
+            divide(v) {
+                if (v instanceof Vector) {
+                    if (v.x != 0) this.x /= v.x;
+                    if (v.y != 0) this.y /= v.y;
+                } else {
+                    if (v != 0) {
+                        this.x /= v;
+                        this.y /= v;
+                    }
+                }
+                return this;
+            }
+
+            normalize() {
+                return this.divide(this.mag());
+            }
+
+            dot(v) {
+                return this.x * v.x + this.y * v.y;
+            }
+
+            mag() {
+                return Math.sqrt(this.dot(this));
+            }
+
+            setMag(newMag) {
+                const currentMag = this.mag();
+                this.x = this.x * newMag / currentMag;
+                this.y = this.y * newMag / currentMag;
+                return this;
+            }
+
+            copy() {
+                return new Vector(this.x, this.y);
+            }
+        }
+
+        class Player {
+            constructor() {
+                this.pos = new Vector(canvas.width / 2 - playerWidth / 2, canvas.height / 2 - playerHeight / 2);
+                this.angle = 0;
+                this.firing = -1;
+                this.health = 3;
+            }
+
+            input(fire) {
+                this.firing = fire;
+            }
+
+            update(dT) {
+                // aim in the direction of the current mouse position
+                this.angle = -Math.atan2(mouseInput.x - this.pos.x, mouseInput.y - this.pos.y) + Math.PI * 0.5;
+
+                if (this.firing > -1) {
+                    const impulse = new Impulse(this.pos.x, this.pos.y, this.firing);
+                    impulse.vel = mouseInput.copy().sub(this.pos).normalize().mult(500);
+                    impulses.push(impulse);
+                }
+            }
+
+            render() {
+                ctx.save();
+                ctx.beginPath();
+                ctx.translate(this.pos.x, this.pos.y);
+                ctx.rotate(this.angle);
+                ctx.fillStyle = 'gray';
+                ctx.fillRect(-(playerWidth / 2), -(playerHeight / 2), playerWidth, playerHeight);
+
+                // draw transceiver
+                ctx.fillStyle = colors[this.firing];
+                ctx.fillRect(playerWidth / 2 - 10, -playerHeight / 2, 10, playerHeight);
+
+                ctx.closePath();
+
+                ctx.restore();
+            }
+        }
+
+        class Enemy {
+            constructor(x, y, color) {
+                this.pos = new Vector(x, y);
+                this.vel = new Vector();
+                this.remove = false;
+                this.color = color;
+            }
+
+            update(dT, impulses) {
+                const vel = this.vel.copy().mult(dT);
+                this.pos.add(vel);
+
+                if (rectContainsRect(canvas.width / 2 - playerWidth / 2, canvas.height / 2 - playerHeight / 2, playerWidth, playerHeight, this.pos.x, this.pos.y, enemyWidth, enemyHeight)) {
+                    player.health--;
+                    if (player.health <= 0) {
+                        player.health = 0;
+                        gameOver = true;
+                    }
+
+                    this.remove = true;
+                }
+
+                for (let i of impulses) {
+                    if (rectContainsCircle(this.pos.x, this.pos.y, enemyWidth, enemyHeight, i.pos.x, i.pos.y, i.radius())) {
+                        if (this.color === i.color) {
+                            i.remove = true;
+                            this.remove = true;
+                        }
+                    }
+                }
+            }
+
+            render() {
+                ctx.fillStyle = this.getColor();
+                ctx.fillRect(this.pos.x, this.pos.y, enemyWidth, enemyHeight);
+            }
+
+            getColor() {
+                const rgba = ['rgb(255,0,0)', 'rgb(0,255,0)', 'rgb(0,0,255)'];
+                return rgba[this.color];
+            }
+        }
+
+        class Impulse {
+            constructor(x, y, color) {
+                this.pos = new Vector(x, y);
+                this.vel = new Vector();
+                this.remove = false;
+                this.damage = 1;
+                this.color = color;
+                this.counter = 1;
+                this.angle = 0;
+            }
+
+            update(dT) {
+                const vel = this.vel.copy().mult(dT);
+                this.pos.add(vel);
+
+                this.counter -= dT;
+
+                const normalizedVel = vel.normalize();
+                this.angle = -Math.atan2(normalizedVel.x, normalizedVel.y) + Math.PI * 0.5;
+
+                if (!rectContainsPoint(0, 0, canvas.width, canvas.height, this.pos.x, this.pos.y)) {
+                    this.remove = true;
+                }
+            }
+
+            render() {
+                ctx.save();
+                ctx.fillStyle = this.getColor();
+                ctx.beginPath();
+                ctx.translate(this.pos.x, this.pos.y);
+                ctx.rotate(this.angle + Math.PI / 2);
+                ctx.arc(0, 0, this.radius(), 0, Math.PI, true);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            getColor() {
+                const rgba = ['rgba(255,0,0,', 'rgba(0,255,0,', 'rgba(0,0,255,'];
+                return rgba[this.color] + (this.counter / 1.0) + ')';
+            }
+
+            radius() {
+                return 100 * (1.0 - this.counter + 0.25);
+            }
+        }
+
+        // GLOBALS
+        let canvas = document.getElementById('game');
+        let ctx = canvas.getContext('2d');
+        let lastFrameTime = Date.now();
+        let fireInput = 0, lastFireInput = -1;
+        let mouseInput = new Vector();
+        const colors = ['lightgray', 'red', 'green', 'blue'];
+        const enemyWidth = 80;
+        const enemyHeight = 80;
+        const playerWidth = 60;
+        const playerHeight = 60;
+        let player;
+        let impulses = [];
+        let enemies = [];
+        let spawnTime = 3;
+        let spawnCounter = 0;
+        let gameOver = false;
+
+        // setup stars for background
+        let stars = [];
+        for (let i = 0; i < 1000; i++) {
+            stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height });
+        }
+
+        function update() {
+            // calculate frame time
+            let deltaTime = (Date.now() - lastFrameTime) / 1000;
+            lastFrameTime = Date.now();
+            if (deltaTime > 1) deltaTime = 1;
+
+            player.input(fireInput);
+            player.update(deltaTime);
+
+            for (let i of impulses) {
+                i.update(deltaTime);
+            }
+
+            for (let e of enemies) {
+                e.update(deltaTime, impulses);
+            }
+
+            // spawn enemies
+            spawnCounter += deltaTime;
+            if (spawnCounter > spawnTime) {
+                spawnCounter = 0;
+
+                const screenEdge = getRandomInt(0, 4);
+
+                let x = 0;
+                let y = 0;
+                if (screenEdge === 0) { // left
+                    x = -enemyWidth - 50;
+                    y = getRandomInt(0, canvas.height);
+                } else if (screenEdge === 1) { // top
+                    x = getRandomInt(0, canvas.width);
+                    y = -enemyHeight - 50;
+                } else if (screenEdge === 2) { // right
+                    x = canvas.width + enemyWidth + 50;
+                    y = getRandomInt(0, canvas.height);
+                } else if (screenEdge === 3) { // bottom
+                    x = getRandomInt(0, canvas.width);
+                    y = canvas.height + enemyHeight + 50;
+                }
+
+                const enemy = new Enemy(x, y, getRandomInt(0, 3));
+                enemy.vel = new Vector(canvas.width / 2, canvas.height / 2).sub(new Vector(x, y)).normalize().mult(100);
+                enemies.push(enemy);
+            }
+
+            // cleanup unneeded entities
+            impulses = impulses.filter(i => !i.remove);
+            enemies = enemies.filter(e => !e.remove);
+
+            // reset inputs
+            fireInput = -1;
+
+            // at the end of each update cycle render the current state of the game
+            render();
+        }
+
+        function render() {
+            // clear screen
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // draw the star background
+            ctx.fillStyle = 'white'; // TODO: maybe add some random transparency
+            for (let s of stars) {
+                ctx.fillRect(s.x, s.y, 1, 1);
+            }
+
+            player.render();
+
+            for (let e of enemies) {
+                e.render();
+            }
+
+            for (let i of impulses) {
+                i.render();
+            }
+
+            // draw ui
+            ctx.font = "24px Arial";
+            ctx.fillStyle = 'white';
+            ctx.fillText('LEBEN:', 0, 22);
+            ctx.fillText('' + player.health, 100, 22);
+        }
+
+        function restart() {
+            player = new Player();
+
+            enemies = [];
+            fireInput = -1;
+            lastFireInput = -1;
+
+            gameOver = false;
+        }
+
+        // setup input handler
+        document.addEventListener('keydown', (e) => {
+            if (e.which === 37 || e.code === 'KeyA' && lastFireInput !== 0) { fireInput = 0; lastFireInput = 0; }
+            if (e.which === 40 || e.code === 'KeyS' && lastFireInput !== 1) { fireInput = 1; lastFireInput = 1; }
+            if (e.which === 39 || e.code === 'KeyD' && lastFireInput !== 2) { fireInput = 2; lastFireInput = 2; }
+            if ((e.which === 32 || e.code === 'Space') && gameOver) {
+                restart();
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.which === 37 || e.code === 'KeyA') {
+                fireInput = -1;
+                if (lastFireInput === 0) lastFireInput = -1;
+            }
+            if (e.which === 40 || e.code === 'KeyS') {
+                fireInput = -1;
+                if (lastFireInput === 1) lastFireInput = -1;
+            }
+            if (e.which === 39 || e.code === 'KeyD') {
+                fireInput = -1;
+                if (lastFireInput === 2) lastFireInput = -1;
+            }
+        });
+        document.addEventListener('mousemove', (e) => {
+            mouseInput.x = e.clientX;
+            mouseInput.y = e.clientY;
+        });
+
+        restart();
+
+        // setup draw loop
+        setInterval(update, 1000 / 30);
+
+    </script>
+</body>
+
+</html>
