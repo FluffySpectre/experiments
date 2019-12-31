@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <style>
+        html,
+        body {
+            padding: 0;
+            margin: 0;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        #field {
+            float: left;
+        }
+
+        .instructions {
+            float: left;
+            padding: 2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="field" width="800" height="800"></canvas>
+
+    <div class="instructions">
+        Press 1: Electron Head<br />
+        Press 2: Electron Tail<br />
+        Press 3: Conductor<br />
+        Press 4: Empty cell<br />
+        
+        <br />
+
+        Click on a cell with the mouse to place.<br />
+        Click and drag the mouse for fast placing.
+        <br /><br />
+
+        Press C to clear the field.<br /><br/>
+
+        Press Space to toggle the simulation.
+    </div>
+
+    <script>
+        let canvas = document.getElementById('field');
+        let ctx = canvas.getContext('2d');
+
+        const cellSize = 32;
+        const columns = Math.floor(canvas.width / cellSize);
+        const rows = Math.floor(canvas.height / cellSize);
+        let cells; // 0 = empty, 1 = electron head, 2 = electron tail, 3 = conductor
+        let simSpeed = 0.1;
+        let simTimeCounter = 0;
+        let lastFrameTime = 0;
+        let running = false;
+        let mouseInputX = -1, mouseInputY = -1;
+        let placingInput = false;
+        let placingElement = 1;
+
+        function createEmptyArray() {
+            let arr = [];
+            for (let x = 0; x < columns; x++) {
+                arr.push([]);
+                for (let y = 0; y < rows; y++) {
+                    arr[x].push(0);
+                }
+            }
+            return arr;
+        }
+
+        function setup() {
+            cells = createEmptyArray();
+
+            document.addEventListener('mousedown', (e) => {
+                placingInput = true;
+
+                mouseInputX = e.clientX;
+                mouseInputY = e.clientY;
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (placingInput) {
+                    mouseInputX = e.clientX;
+                    mouseInputY = e.clientY;
+                }
+            });
+            document.addEventListener('mouseup', (e) => {
+                placingInput = false;
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') {
+                    running = !running;
+                } else if (e.code === 'Digit1') {
+                    placingElement = 1;
+                } else if (e.code === 'Digit2') {
+                    placingElement = 2;
+                } else if (e.code === 'Digit3') {
+                    placingElement = 3;
+                } else if (e.code === 'Digit4') {
+                    placingElement = 0;
+                } else if (e.code === 'KeyC') {
+                    reset();
+                }
+            });
+        }
+
+        function reset() {
+            cells = createEmptyArray();
+        }
+
+        function update() {
+            // calculate frame time
+            let deltaTime = (Date.now() - lastFrameTime) / 1000;
+            lastFrameTime = Date.now();
+            if (deltaTime > 1) deltaTime = 1;
+
+            if (running) {
+                simTimeCounter += deltaTime;
+                if (simTimeCounter > simSpeed) {
+                    simTimeCounter = 0;
+
+                    // calculate the next generation
+                    let nextGenCells = createEmptyArray();
+                    for (let x = 0; x < columns; x++) {
+                        for (let y = 0; y < rows; y++) {
+                            const cell = cells[x][y];
+
+                            if (cell > 0) { // not empty
+                                if (cell === 1) { // head to tail
+                                    nextGenCells[x][y] = 2;
+                                } else if (cell === 2) { // tail to conductor
+                                    nextGenCells[x][y] = 3;
+                                } else {
+                                    // conductor to head, if the cell has 1 or 2 neighboring heads
+                                    let numNeighborHeads = 0;
+                                    for (let x1 = -1; x1 <= 1; x1++) {
+                                        for (let y1 = -1; y1 <= 1; y1++) {
+                                            const neighborX = x + x1;
+                                            const neighborY = y + y1;
+
+                                            if (!(neighborX === x && neighborY === y)) {
+                                                if (cells[neighborX] !== undefined) {
+                                                    if (cells[neighborX][neighborY] === 1)
+                                                        numNeighborHeads++;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if (numNeighborHeads === 1 || numNeighborHeads === 2) {
+                                        nextGenCells[x][y] = 1;
+                                    } else {
+                                        // the cell doesn't change
+                                        nextGenCells[x][y] = cell;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    cells = nextGenCells;
+                }
+
+            } else {
+                if (mouseInputX > -1 && mouseInputY > -1) {
+                    const x = Math.floor(mouseInputX / cellSize);
+                    const y = Math.floor(mouseInputY / cellSize);
+
+                    if (x >= 0 && x < columns && y >= 0 && y < rows)
+                        cells[x][y] = placingElement;
+                }
+            }
+
+            if (!placingInput) {
+                mouseInputY = -1;
+                mouseInputX = -1;
+            }
+
+            render();
+        }
+
+        function render() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let x = 0; x < columns; x++) {
+                for (let y = 0; y < rows; y++) {
+                    if (cells[x][y] === 1) {
+                        ctx.fillStyle = 'blue';
+                    } else if (cells[x][y] === 2) {
+                        ctx.fillStyle = 'red';
+                    } else if (cells[x][y] === 3) {
+                        ctx.fillStyle = 'yellow';
+                    } else {
+                        ctx.fillStyle = 'black';
+                    }
+
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 0.25;
+                    ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+
+        setup();
+        setInterval(update, 1000 / 15);
+    </script>
+</body>
+
+</html>
