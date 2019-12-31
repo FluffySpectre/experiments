@@ -131,17 +131,18 @@ class Player {
 }
 
 class Enemy {
-    constructor(x, y, color) {
+    constructor(x, y, color, movementBehaviour) {
         this.pos = new Vector(x, y);
         this.vel = new Vector();
         this.remove = false;
         this.color = color;
         this.firstFrameAfterRemove = true;
+        this.movementBehaviour = movementBehaviour;
+        this.moveData = [0, 0, 0, 0];
     }
 
     update(dT, impulses, explosions) {
-        const vel = this.vel.copy().mult(dT);
-        this.pos.add(vel);
+        this.movementBehaviour(this, dT);
 
         if (rectContainsRect(player.pos.x - player.width * 1.25, player.pos.y - player.height / 2, player.width, player.height, this.pos.x, this.pos.y, enemyWidth, enemyHeight)) {
             player.damage();

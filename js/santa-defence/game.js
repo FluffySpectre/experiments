@@ -15,12 +15,27 @@ let gameOver = false;
 let roundSpawns = 5;
 let roundSpawnedEnemies = 0;
 let roundDestroyedEnemies = 0;
+let sinMovementPercentage = 0.9;
+let sinMovementFromRound = 3;
 let enemySpeed = 100;
 let roundCooldown = 3;
 let round = 1;
 let health = [];
 let highscoreRound = 0;
 let scrollingBackground = new ScrollingBackground();
+
+// enemy movement behaviours
+const Move_Straight = (enemy, dT) => {
+    const vel = enemy.vel.copy().mult(dT);
+    enemy.pos.add(vel);
+};
+const Move_Sin = (enemy, dT) => {
+    const vel = enemy.vel.copy();
+    enemy.moveData[0] += dT * 3;
+    vel.y += 600 * Math.cos(enemy.moveData[0]);
+    vel.mult(dT);
+    enemy.pos.add(vel);
+};
 
 function update() {
     // calculate frame time
@@ -50,7 +65,11 @@ function update() {
             const y = canvas.height / 2 - enemyHeight / 2 - 50;
             const color = getRandomInt(0, 3);
 
-            const enemy = new Enemy(x, y, color);
+            let mBehaviour = Move_Straight;
+            if (round >= sinMovementFromRound && roundSpawnedEnemies / roundSpawns >= sinMovementPercentage) {
+                mBehaviour = Move_Sin;
+            }
+            const enemy = new Enemy(x, y, color, mBehaviour);
             enemy.vel = new Vector(-enemySpeed, 0);
             enemies.push(enemy);
         }
