@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <style>
+        html,
+        body {
+            padding: 0;
+            margin: 0;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        #field {
+            float: left;
+        }
+
+        .instructions {
+            float: left;
+            padding: 2rem;
+        }
+
+        #generation {
+            clear: both;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="field" width="800" height="800"></canvas>
+
+    <div class="instructions">
+        <div id="generation"></div>
+        <br/>
+        Press Space to start/stop the simulation.<br/>
+        Press R to reset.
+    </div>
+
+    <script>
+        let canvas = document.getElementById('field');
+        let ctx = canvas.getContext('2d');
+
+        const cellSize = 8;
+        const columns = Math.floor(canvas.width / cellSize);
+        const rows = Math.floor(canvas.height / cellSize);
+        let cells; // 0 = white, 1 = black
+        let simStepsPerFrame = 50;
+        let running = false;
+        let antX = Math.floor(columns / 2), antY = Math.floor(rows / 2);
+        let antDir = 2; // 0 = up, 1 = right, 2 = down, 3 = left
+        let generation = 0, maxGenerations = 11500;
+        let generationLabel;
+
+        function createEmptyArray() {
+            let arr = [];
+            for (let x = 0; x < columns; x++) {
+                arr.push([]);
+                for (let y = 0; y < rows; y++) {
+                    arr[x].push(0);
+                }
+            }
+            return arr;
+        }
+
+        function setup() {
+            cells = createEmptyArray();
+
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') {
+                    running = !running;
+                } else if (e.code === 'KeyR') {
+                    reset();
+                }
+            });
+
+            generationLabel = document.getElementById('generation');
+        }
+
+        function reset() {
+            cells = createEmptyArray();
+            antX = Math.floor(columns / 2);
+            antY = Math.floor(rows / 2);
+            antDir = 2;
+            generation = 0;
+            generationLabel.innerHTML = 'Generation: 0';
+            running = false;
+        }
+
+        function update() {
+            if (running) {
+                for (let i = 0; i < simStepsPerFrame; i++) {
+                    // calculate the next generation
+                    if (generation >= maxGenerations) {
+                        generation = maxGenerations;
+                        running = false;
+                        return;
+                    }
+                    generation++;
+
+                    // check the view direction and toggle the color of the cell the ant is standing on
+                    if (cells[antX][antY] === 0) {
+                        // turn right by 90 degrees
+                        antDir++;
+                        if (antDir > 3) antDir = 0;
+
+                        // change the cell color to black
+                        cells[antX][antY] = 1;
+                    }
+                    else if (cells[antX][antY] === 1) {
+                        // turn left by 90 degrees
+                        antDir--;
+                        if (antDir < 0) antDir = 3;
+
+                        // change the cell color to white
+                        cells[antX][antY] = 0;
+                    }
+
+                    // make a step in the current direction
+                    if (antDir === 0) antY--;
+                    if (antDir === 1) antX++;
+                    if (antDir === 2) antY++;
+                    if (antDir === 3) antX--;
+                }
+            }
+
+            render();
+        }
+
+        function render() {
+            for (let x = 0; x < columns; x++) {
+                for (let y = 0; y < rows; y++) {
+                    if (cells[x][y] === 1) {
+                        ctx.fillStyle = 'black';
+                    } else {
+                        ctx.fillStyle = 'white';
+                    }
+
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+
+            // draw the ant
+            ctx.fillStyle = 'red';
+            ctx.fillRect(antX * cellSize, antY * cellSize, cellSize, cellSize);
+
+            generationLabel.innerHTML = 'Generation: ' + generation;
+        }
+
+        setup();
+        setInterval(update, 1000 / 15);
+    </script>
+</body>
+
+</html>
