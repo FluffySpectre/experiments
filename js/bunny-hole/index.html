@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+  <meta name="viewport" content="user-scalable=no,width=device-width">
+  <title>Platformer</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      height: 100%;
+      width: 100%;
+    }
+
+    body {
+      align-content: center;
+      align-items: space-around;
+      background-color: #202830;
+      display: grid;
+      justify-items: center;
+      height: 100%;
+      width: 100%;
+    }
+
+    canvas {
+      image-rendering: pixelated;
+    }
+
+    #carrotCounter {
+      color: #c07000;
+      font-size: 2.0rem;
+      position: fixed;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas></canvas>
+
+  <p id="carrotCounter"></p>
+
+  <script src="input.js"></script>
+  <script src="display.js"></script>
+  <script src="engine.js"></script>
+  <script src="game.js"></script>
+  <script src="main.js"></script>
+</body>
+
+</html>
