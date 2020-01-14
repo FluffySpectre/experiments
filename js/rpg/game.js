@@ -455,8 +455,6 @@ class World {
         this.doors = [];
         this.door = null;
         this.enemies = [];
-        this.objects = [];
-        this.objects.push(new SimpleAnimated(128, 16, [19, 20, 21], 6), new SimpleAnimated(160, 16, [19, 20, 21], 6), new Switch(32, 64, [22, 24]));
 
         this.height = this.tileSet.tileSize * this.rows;
         this.width = this.tileSet.tileSize * this.columns;
