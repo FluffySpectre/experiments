@@ -404,6 +404,33 @@ class Switch extends GameObject {
     }
 }
 
+class Chest extends GameObject {
+    constructor(x, y) {
+        super(x, y, 16, 16);
+
+        this.frameSets = {
+            'closed': [26],
+            'open': [25],
+        };
+
+        this.open = false;
+        this.animator = new Animator(this.frameSets['closed'], 0, 'pause');
+    }
+
+    interact(user) {
+        this.open = !this.open;
+    }
+
+    update() {
+        this.updateAnimation();
+    }
+
+    updateAnimation() {
+        if (this.open) this.animator.changeFrameSet(this.frameSets['open'], 'pause');
+        else this.animator.changeFrameSet(this.frameSets['closed'], 'pause');
+    }
+}
+
 class SimpleAnimated extends GameObject {
     constructor(x, y, frames, delay) {
         super(x, y, 16, 16);
@@ -433,6 +460,7 @@ class TileSet {
             new Frame(48, 64, 16, 16, 0, 0), new Frame(64, 64, 16, 16, 0, 0), new Frame(80, 64, 16, 16, 0, 0), // enemy-down
             new Frame(0, 160, 16, 16, 0, 0), new Frame(16, 160, 16, 16, 0, 0), new Frame(32, 160, 16, 16, 0, 0), // torch-fire
             new Frame(0, 176, 16, 16, 0, 0), new Frame(16, 176, 16, 16, 0, 0), new Frame(32, 176, 16, 16, 0, 0), // switch
+            new Frame(48, 176, 16, 16, 0, 0), new Frame(64, 176, 16, 16, 0, 0), // chest
         ];
     }
 }
@@ -503,6 +531,8 @@ class World {
                 this.entities.push(new Switch(entity.x * this.tileSet.tileSize, entity.y * this.tileSet.tileSize, [22, 24]));
             else if (entity.type === 'torch')
                 this.entities.push(new SimpleAnimated(entity.x * this.tileSet.tileSize, entity.y * this.tileSet.tileSize, [19, 20, 21], 6));
+            else if (entity.type === 'chest')
+                this.entities.push(new Chest(entity.x * this.tileSet.tileSize, entity.y * this.tileSet.tileSize));
         }
 
         for (let door of zone.doors) {
