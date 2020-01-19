@@ -49,16 +49,8 @@ window.addEventListener('load', function (event) {
         display.drawMap(assetsManager.tileSetImage,
             game.world.tileSet.columns, game.world.floorMap, game.world.columns, game.world.tileSet.tileSize);
 
-        let frame = game.world.tileSet.frames[game.world.player.animator.frameValue];
-
-        display.drawObject(assetsManager.tileSetImage,
-            frame.x, frame.y,
-            game.world.player.x + Math.floor(game.world.player.width * 0.5 - frame.width * 0.5) + frame.offsetX,
-            game.world.player.y + frame.offsetY, frame.width, frame.height);
-
-        // DEBUG
-        display.drawRect(game.world.player.interactionRect.x, game.world.player.interactionRect.y, game.world.player.interactionRect.width, game.world.player.interactionRect.height, 'rgba(255, 0, 0, 0.5)');
-
+        let frame;
+        
         for (let enemy of game.world.enemies) {
             frame = game.world.tileSet.frames[enemy.animator.frameValue];
 
@@ -67,6 +59,16 @@ window.addEventListener('load', function (event) {
                 enemy.x + frame.offsetX,
                 enemy.y + frame.offsetY, frame.width, frame.height);
         }
+
+        frame = game.world.tileSet.frames[game.world.player.animator.frameValue];
+
+        display.drawObject(assetsManager.tileSetImage,
+            frame.x, frame.y,
+            game.world.player.x + Math.floor(game.world.player.width * 0.5 - frame.width * 0.5) + frame.offsetX,
+            game.world.player.y + frame.offsetY, frame.width, frame.height);
+
+        // DEBUG
+        // display.drawRect(game.world.player.interactionRect.x, game.world.player.interactionRect.y, game.world.player.interactionRect.width, game.world.player.interactionRect.height, 'rgba(255, 0, 0, 0.5)');
 
         for (let entity of game.world.entities) {
             frame = game.world.tileSet.frames[entity.animator.frameValue];

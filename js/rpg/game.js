@@ -232,6 +232,7 @@ class Player extends MovingObject {
             'move-left': [7, 8, 9],
             'move-right': [10, 11, 12],
             'move-up': [13, 14, 15],
+            'dead': [52],
         };
 
         this.animator = new Animator(this.frameSets['idle-down'], 5);
@@ -240,6 +241,9 @@ class Player extends MovingObject {
         this.direction = 0;
         this.velocityX = 0;
         this.velocityY = 0;
+        this.impactForce = 5;
+        this.damage = 10;
+        this.health = 100;
 
         this.interactionRect = new GameObject(x, y, 16, 16);
     }
@@ -275,37 +279,49 @@ class Player extends MovingObject {
         // }
     }
 
+    takeDamage(damage, direction) {
+        this.velocityX += -direction.x * this.impactForce;
+        this.velocityY += -direction.y * this.impactForce;
+        this.health -= damage;
+        if (this.health < 0) this.health = 0;
+    }
+
     updateAnimation() {
-        // if (this.attacking && this.animator.frameIndex <= 3) {
-            // if (this.animator.frameIndex === 3)
-            //    this.attacking = false;
-        // } else {
-            if (this.direction === 1) {
-                if (this.velocityX < -0.1) this.animator.changeFrameSet(this.frameSets['move-left'], 'loop', 4);
-                else this.animator.changeFrameSet(this.frameSets['idle-left'], 'pause');
+        if (this.health > 0) {
+            // if (this.attacking && this.animator.frameIndex <= 3) {
+                // if (this.animator.frameIndex === 3)
+                //    this.attacking = false;
+            // } else {
+                if (this.direction === 1) {
+                    if (this.velocityX < -0.1) this.animator.changeFrameSet(this.frameSets['move-left'], 'loop', 4);
+                    else this.animator.changeFrameSet(this.frameSets['idle-left'], 'pause');
 
-            } else if (this.direction === 2) {
-                if (this.velocityX > 0.1) this.animator.changeFrameSet(this.frameSets['move-right'], 'loop', 4);
-                else this.animator.changeFrameSet(this.frameSets['idle-right'], 'pause');
+                } else if (this.direction === 2) {
+                    if (this.velocityX > 0.1) this.animator.changeFrameSet(this.frameSets['move-right'], 'loop', 4);
+                    else this.animator.changeFrameSet(this.frameSets['idle-right'], 'pause');
 
-            } else if (this.direction === 3) {
-                if (this.velocityY < -0.1) this.animator.changeFrameSet(this.frameSets['move-up'], 'loop', 4);
-                else this.animator.changeFrameSet(this.frameSets['idle-up'], 'pause');
+                } else if (this.direction === 3) {
+                    if (this.velocityY < -0.1) this.animator.changeFrameSet(this.frameSets['move-up'], 'loop', 4);
+                    else this.animator.changeFrameSet(this.frameSets['idle-up'], 'pause');
 
-            } else if (this.direction === 0) {
-                if (this.velocityY > 0.1) this.animator.changeFrameSet(this.frameSets['move-down'], 'loop', 4);
-                else this.animator.changeFrameSet(this.frameSets['idle-down'], 'pause');
-            }
-        // }
+                } else if (this.direction === 0) {
+                    if (this.velocityY > 0.1) this.animator.changeFrameSet(this.frameSets['move-down'], 'loop', 4);
+                    else this.animator.changeFrameSet(this.frameSets['idle-down'], 'pause');
+                }
+            // }
+        } else {
+            this.animator.changeFrameSet(this.frameSets['dead'], 'pause');
+        }
 
         this.animator.animate();
     }
 
     updatePosition(gravity, friction) {
+        if (this.health <= 0) return;
+
         this.xOld = this.x;
         this.yOld = this.y;
 
-        //this.velocityY += gravity;
         this.velocityY *= friction;
         this.velocityX *= friction;
 
@@ -319,7 +335,9 @@ class Player extends MovingObject {
         this.y += this.velocityY;
     }
 
-    updateInteraction(entities) {
+    updateInteraction(entities, enemies) {
+        if (this.health <= 0) return;
+
         // update interaction rectangle position
         if (this.direction === 0) {
             this.interactionRect.x = this.x - this.interactionRect.width / 4;
@@ -343,6 +361,15 @@ class Player extends MovingObject {
                     entity.interact(this);
                 }
             }
+
+            for (let enemy of enemies) {
+                if (this.interactionRect.collideObject(enemy)) {
+                    const a = (this.x + this.width / 2) - (enemy.x + enemy.width / 2);
+                    const b = (this.y + this.height / 2) - (enemy.y + enemy.height / 2);
+                    const distanceToPlayer = Math.sqrt(a * a + b * b);
+                    enemy.takeDamage(this.damage, { x: a / distanceToPlayer, y: b / distanceToPlayer });
+                }
+            }
         }
     }
 }
@@ -350,30 +377,105 @@ class Player extends MovingObject {
 // TODO: implement this properly
 class Enemy extends MovingObject {
     constructor(x, y) {
-        super(x, y, 7, 12);
+        super(x, y, 10, 16);
 
-        this.animator = new Animator([16, 17], 3);
+        this.frameSets = {
+            'idle-down': [28, 29],
+            'idle-left': [31, 32],
+            'idle-right': [34, 35],
+            'idle-up': [37, 38],
+            'move-down': [27, 28],
+            'move-left': [30, 31],
+            'move-right': [33, 34],
+            'move-up': [36, 37],
+            'dead': [51],
+        };
+
+        this.animator = new Animator(this.frameSets['move-down'], 5);
+        this.attackRadius = 18;
+        this.attentionRadius = 50;
+        this.velocityMax = 1;
+        this.direction = 0;
+        this.attackDelay = 0.5;
+        this.attackCounter = 0;
+        this.health = 100;
+        this.damage = 10;
+        this.impactForce = 5;
+        this.tookDamage = false;
+        this.damageDirection = null;
+    }
+
+    takeDamage(damage, direction) {
+        this.damageDirection = direction;
+        this.tookDamage = true;
+        this.health -= damage;
+        if (this.health < 0) this.health = 0;
     }
 
     updateAnimation() {
+        if (this.health > 0) {
+            if (this.velocityX < -0.1) { this.animator.changeFrameSet(this.frameSets['move-left'], 'loop', 5); this.direction = 1; }
+            else if (this.velocityX > 0.1) { this.animator.changeFrameSet(this.frameSets['move-right'], 'loop', 5); this.direction = 2; }
+            else if (this.velocityY < -0.1) { this.animator.changeFrameSet(this.frameSets['move-up'], 'loop', 5); this.direction = 3; }
+            else if (this.velocityY > 0.1) { this.animator.changeFrameSet(this.frameSets['move-down'], 'loop', 5); this.direction = 0; }
+            else this.animator.changeFrameSet(this.frameSets[Object.keys(this.frameSets)[this.direction]], 'loop', 5);    
+        } else {
+            this.animator.changeFrameSet(this.frameSets['dead'], 'pause');
+        }
+        
         this.animator.animate();
     }
 
-    updatePosition() {
+    updatePosition(player, friction) {
+        if (this.health <= 0) return;
+
         this.xOld = this.x;
         this.yOld = this.y;
 
-        this.velocityY += friction;
-        this.velocityX *= friction;
+        // check proximity to the player
+        const a = (this.x + this.width / 2) - (player.x + player.width / 2);
+        const b = (this.y + this.height / 2) - (player.y + player.height / 2);
+        const distanceToPlayer = Math.sqrt(a * a + b * b);
+        if (distanceToPlayer < this.attentionRadius) {
+            if (distanceToPlayer < this.attackRadius) {
+                // if we are within the attack radius, attack the player
+                this.attackCounter += 0.05;
+                if (this.attackCounter > this.attackDelay) {
+                    this.attackCounter = 0;
+                    player.takeDamage(this.damage, { x: a / distanceToPlayer, y: b / distanceToPlayer });
+                }
 
-        if (Math.abs(this.velocityX) > this.velocityMax)
-            this.velocityX = this.velocityMax * Math.sign(this.velocityX);
+            } else {
+                // if we further away than the attack radius, move towards the player
+                this.velocityX += 1 * Math.sign(player.x - this.x);
+                this.velocityY += 1 * Math.sign(player.y - this.y);
+                
+                if (Math.abs(this.velocityX) > this.velocityMax)
+                    this.velocityX = this.velocityMax * Math.sign(this.velocityX);
 
-        if (Math.abs(this.velocityY) > this.velocityMax)
-            this.velocityY = this.velocityMax * Math.sign(this.velocityY);
+                if (Math.abs(this.velocityY) > this.velocityMax)
+                    this.velocityY = this.velocityMax * Math.sign(this.velocityY);
+
+                if (Math.abs(player.x - this.x) < 1) this.velocityX = 0;
+                if (Math.abs(player.y - this.y) < 1) this.velocityY = 0;
+
+                this.attackCounter = 0;
+            }
+        } else {
+            this.attackCounter = 0;
+        }
+
+        if (this.tookDamage) {
+            this.tookDamage = false;
+            this.velocityX += -this.damageDirection.x * this.impactForce;
+            this.velocityY += -this.damageDirection.y * this.impactForce;
+        }
 
         this.x += this.velocityX;
         this.y += this.velocityY;
+
+        this.velocityY *= friction;
+        this.velocityX *= friction;
     }
 }
 
@@ -461,6 +563,16 @@ class TileSet {
             new Frame(0, 160, 16, 16, 0, 0), new Frame(16, 160, 16, 16, 0, 0), new Frame(32, 160, 16, 16, 0, 0), // torch-fire
             new Frame(0, 176, 16, 16, 0, 0), new Frame(16, 176, 16, 16, 0, 0), new Frame(32, 176, 16, 16, 0, 0), // switch
             new Frame(48, 176, 16, 16, 0, 0), new Frame(64, 176, 16, 16, 0, 0), // chest
+            new Frame(96, 64, 16, 16, 0, 0), new Frame(112, 64, 16, 16, 0, 0), new Frame(128, 64, 16, 16, 0, 0), // ghost-down
+            new Frame(96, 80, 16, 16, 0, 0), new Frame(112, 80, 16, 16, 0, 0), new Frame(128, 80, 16, 16, 0, 0), // ghost-left
+            new Frame(96, 96, 16, 16, 0, 0), new Frame(112, 96, 16, 16, 0, 0), new Frame(128, 96, 16, 16, 0, 0), // ghost-right
+            new Frame(96, 112, 16, 16, 0, 0), new Frame(112, 112, 16, 16, 0, 0), new Frame(128, 112, 16, 16, 0, 0), // ghost-up
+            new Frame(96+48, 64-64, 16, 16, 0, 0), new Frame(112+48, 64-64, 16, 16, 0, 0), new Frame(128+48, 64-64, 16, 16, 0, 0), // skeleton-down
+            new Frame(96+48, 80-64, 16, 16, 0, 0), new Frame(112+48, 80-64, 16, 16, 0, 0), new Frame(128+48, 80-64, 16, 16, 0, 0), // skeleton-left
+            new Frame(96+48, 96-64, 16, 16, 0, 0), new Frame(112+48, 96-64, 16, 16, 0, 0), new Frame(128+48, 96-64, 16, 16, 0, 0), // skeleton-right
+            new Frame(96+48, 112-64, 16, 16, 0, 0), new Frame(112+48, 112-64, 16, 16, 0, 0), new Frame(128+48, 112-64, 16, 16, 0, 0), // skeleton-up
+            new Frame(144, 144, 16, 16, 0, 0), // ghost-dead
+            new Frame(160, 144, 16, 16, 0, 0), // player-dead
         ];
     }
 }
@@ -560,7 +672,7 @@ class World {
 
     update() {
         this.player.updatePosition(this.gravity, this.friction);
-        this.player.updateInteraction(this.entities);
+        this.player.updateInteraction(this.entities, this.enemies);
 
         this.collideObject(this.player);
 
@@ -571,6 +683,8 @@ class World {
         }
 
         for (let enemy of this.enemies) {
+            this.collideObject(enemy);
+            enemy.updatePosition(this.player, this.friction);
             enemy.updateAnimation();
         }
 
@@ -579,5 +693,8 @@ class World {
         }
 
         this.player.updateAnimation();
+
+        // cleanup entities
+        //this.enemies = this.enemies.filter(e => e.health > 0);
     }
 }
