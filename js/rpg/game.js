@@ -322,8 +322,14 @@ class Player extends MovingObject {
         this.xOld = this.x;
         this.yOld = this.y;
 
-        this.velocityY *= friction;
-        this.velocityX *= friction;
+        // fix for diagonal movement
+        if (Math.abs(this.velocityX) > 0.01 && Math.abs(this.velocityY) > 0.01) {
+            this.velocityY *= friction / 1.1;
+            this.velocityX *= friction / 1.1;
+        } else {
+            this.velocityY *= friction;
+            this.velocityX *= friction;
+        }
 
         if (Math.abs(this.velocityX) > this.velocityMax)
             this.velocityX = this.velocityMax * Math.sign(this.velocityX);
@@ -380,18 +386,18 @@ class Enemy extends MovingObject {
         super(x, y, 10, 16);
 
         this.frameSets = {
-            'idle-down': [28, 29],
-            'idle-left': [31, 32],
-            'idle-right': [34, 35],
-            'idle-up': [37, 38],
-            'move-down': [27, 28],
-            'move-left': [30, 31],
-            'move-right': [33, 34],
-            'move-up': [36, 37],
-            'dead': [51],
+            'idle-down': [54],
+            'idle-left': [57],
+            'idle-right': [60],
+            'idle-up': [63],
+            'move-down': [53, 54],
+            'move-left': [56, 57],
+            'move-right': [59, 60],
+            'move-up': [62, 63],
+            'dead': [65],
         };
 
-        this.animator = new Animator(this.frameSets['move-down'], 5);
+        this.animator = new Animator(this.frameSets['idle-down'], 5, 'pause');
         this.attackRadius = 18;
         this.attentionRadius = 50;
         this.velocityMax = 1;
@@ -473,9 +479,15 @@ class Enemy extends MovingObject {
 
         this.x += this.velocityX;
         this.y += this.velocityY;
-
-        this.velocityY *= friction;
-        this.velocityX *= friction;
+        
+        // fix for diagonal movement
+        if (Math.abs(this.velocityX) > 0.01 && Math.abs(this.velocityY) > 0.01) {
+            this.velocityY *= friction / 1.1;
+            this.velocityX *= friction / 1.1;
+        } else {
+            this.velocityY *= friction;
+            this.velocityX *= friction;
+        }
     }
 }
 
@@ -573,6 +585,11 @@ class TileSet {
             new Frame(96+48, 112-64, 16, 16, 0, 0), new Frame(112+48, 112-64, 16, 16, 0, 0), new Frame(128+48, 112-64, 16, 16, 0, 0), // skeleton-up
             new Frame(144, 144, 16, 16, 0, 0), // ghost-dead
             new Frame(160, 144, 16, 16, 0, 0), // player-dead
+            new Frame(96+48, 64, 16, 16, 0, 0), new Frame(112+48, 64, 16, 16, 0, 0), new Frame(128+48, 64, 16, 16, 0, 0), // spider-down
+            new Frame(96+48, 80, 16, 16, 0, 0), new Frame(112+48, 80, 16, 16, 0, 0), new Frame(128+48, 80, 16, 16, 0, 0), // spider-left
+            new Frame(96+48, 96, 16, 16, 0, 0), new Frame(112+48, 96, 16, 16, 0, 0), new Frame(128+48, 96, 16, 16, 0, 0), // spider-right
+            new Frame(96+48, 112, 16, 16, 0, 0), new Frame(112+48, 112, 16, 16, 0, 0), new Frame(128+48, 112, 16, 16, 0, 0), // spider-up
+            new Frame(144, 176, 16, 16, 0, 0), // spider-dead
         ];
     }
 }
