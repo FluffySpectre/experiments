@@ -1,5 +1,5 @@
 {  
-  "enemies": [[8,2], [10, 2]],
+  "enemies": [[8, 2], [10, 2]],
 
   "doors": [
     {
@@ -9,7 +9,32 @@
       "height": 16,
       "destinationX": 152,
       "destinationY": 215,
-      "destinationZone": "01"
+      "destinationZone": "01",
+      "locked": true
+    }
+  ],
+
+  "rules": [
+    {
+      "conditions": [
+        {
+          "fact": "switchOn",
+          "operator": "equal",
+          "value": true
+        },
+        {
+          "fact": "enemyCount",
+          "operator": "equal",
+          "value": 0
+        }
+      ],
+      "booleanOperator": "and",
+      "event": {
+        "type": "switchedOn",
+        "params": {
+          "entity": "switch01"
+        }
+      }
     }
   ],
 

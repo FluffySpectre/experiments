@@ -123,11 +123,12 @@ class Frame {
 }
 
 class GameObject {
-    constructor(x, y, width, height) {
+    constructor(x, y, width, height, id) {
         this.height = height;
         this.width = width;
         this.x = x;
         this.y = y;
+        this.id = id;
     }
 
     collideObject(object) {
@@ -196,6 +197,11 @@ class Door extends GameObject {
         this.destinationX = door.destinationX;
         this.destinationY = door.destinationY;
         this.destinationZone = door.destinationZone;
+        this.locked = door.locked;
+
+        eventBus.handle('switchedOn', (e) => {
+            this.locked = false;
+        });
     }
 }
 
@@ -296,7 +302,7 @@ class Player extends MovingObject {
         this.animator.animate();
     }
 
-    updatePosition(gravity, friction) {
+    updatePosition(friction) {
         if (this.health <= 0) return;
 
         this.xOld = this.x;
@@ -410,11 +416,11 @@ class TileSet {
 }
 
 class World {
-    constructor(friction = 0.7, gravity = 2) {
+    constructor(friction = 0.7) {
+        this.rules = new Rules();
         this.collider = new Collider();
 
         this.friction = friction;
-        this.gravity = gravity;
 
         this.columns = 19;
         this.rows = 15;
@@ -430,6 +436,19 @@ class World {
 
         this.height = this.tileSet.tileSize * this.rows;
         this.width = this.tileSet.tileSize * this.columns;
+
+        eventBus.handle('change-world-facts', e => {
+            const oldState = { ...this.worldFacts };
+            this.worldFacts = { ...this.worldFacts, ...e };
+            console.log('World state changed', oldState, this.worldFacts);
+        });
+        eventBus.handle('enemy-died', e => {
+            console.log('ENEMY DIED');
+            this.worldFacts = { ...this.worldFacts, enemyCount: --this.worldFacts.enemyCount };
+        });
+        eventBus.handle('switch-change', e => {
+            this.worldFacts = { ...this.worldFacts, switchOn: e.state };
+        });
     }
 
     collideObject(object) {
@@ -470,6 +489,9 @@ class World {
         this.rows = zone.rows;
         this.zoneId = zone.id;
 
+        this.worldFacts = { switchOn: false, enemyCount: 2 };
+        this.rules.addRules(zone.rules);
+
         for (let entity of zone.entities) {
             if (entity.type === 'switch')
                 this.entities.push(new Switch(entity.x * this.tileSet.tileSize, entity.y * this.tileSet.tileSize, [22, 24]));
@@ -503,13 +525,18 @@ class World {
     }
 
     update() {
-        this.player.updatePosition(this.gravity, this.friction);
+        const events = this.rules.check(this.worldFacts);
+        for (let event of events) {
+            eventBus.send(event.type, event.params);
+        }
+
+        this.player.updatePosition(this.friction);
         this.player.updateInteraction(this.entities, this.enemies);
 
         this.collideObject(this.player);
 
         for (let door of this.doors) {
-            if (door.collideObjectCenter(this.player)) {
+            if (!door.locked && door.collideObjectCenter(this.player)) {
                 this.door = door;
             }
         }

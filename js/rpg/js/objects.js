@@ -1,6 +1,6 @@
 class Switch extends GameObject {
-    constructor(x, y, frames) {
-        super(x, y, 16, 8);
+    constructor(x, y, frames, id) {
+        super(x, y, 16, 8, id);
 
         this.frameSets = {
             'off': [frames[0]],
@@ -8,11 +8,18 @@ class Switch extends GameObject {
         };
 
         this.on = false;
+        this.wasOn = false;
         this.animator = new Animator(this.frameSets['off'], 0, 'pause');
     }
 
     interact(user) {
         this.on = !this.on;
+
+        if (this.on && !this.wasOn) {
+            this.wasOn = true;
+
+            eventBus.send('switch-change', { id: this.id, state: true });
+        }
     }
 
     update() {

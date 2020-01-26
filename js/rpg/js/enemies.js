@@ -29,10 +29,16 @@ class Enemy extends MovingObject {
     }
 
     takeDamage(damage, direction) {
-        this.damageDirection = direction;
-        this.tookDamage = true;
-        this.health -= damage;
-        if (this.health < 0) this.health = 0;
+        if (this.health > 0) {
+            this.damageDirection = direction;
+            this.tookDamage = true;
+            this.health -= damage;
+            if (this.health <= 0) {
+                this.health = 0;
+    
+                eventBus.send('enemy-died');
+            }
+        }
     }
 
     updateAnimation() {

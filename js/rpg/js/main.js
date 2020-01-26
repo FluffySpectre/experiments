@@ -1,4 +1,24 @@
 window.addEventListener('load', function (event) {
+    class EventBus {
+        constructor() {
+            this.handlers = [];
+        }
+
+        handle(event, handlerFunc) {
+            this.handlers[event] = this.handlers[event] || [];
+            this.handlers[event].push({
+                handlerFunc
+            });
+        }
+
+        send(event, param) {
+            if (this.handlers[event])
+                this.handlers[event].forEach(h => h.handlerFunc(param));
+            else
+                throw new Error('No handler for this event', event);
+        }
+    }
+
     class AssetsManager {
         constructor() {
             this.tileSetImage = null;
@@ -105,6 +125,7 @@ window.addEventListener('load', function (event) {
         }
     }
 
+    window.eventBus = new EventBus();
     let assetsManager = new AssetsManager();
     let controller = new InputController();
     let display = new Display(document.querySelector('canvas'));

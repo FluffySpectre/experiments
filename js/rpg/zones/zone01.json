@@ -9,9 +9,12 @@
       "height": 16,
       "destinationX": 152,
       "destinationY": 20,
-      "destinationZone": "00"
+      "destinationZone": "00",
+      "locked": false
     }
   ],
+
+  "rules": [],
 
   "columns": 19,
   "rows"   : 15,
