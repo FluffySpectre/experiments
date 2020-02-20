@@ -1,10 +1,12 @@
 const operators = {
     equal: (a, b) => a === b,
+    notEqual: (a, b) => a !== b,
     less: (a, b) => a < b,
     lessEqual: (a, b) => a <= b,
     greater: (a, b) => a > b,
     greaterEqual: (a, b) => a >= b,
     contains: (a, b) => a.contains(b),
+    notContains: (a, b) => !a.contains(b),
 };
 
 class Rules {
@@ -25,10 +27,15 @@ class Rules {
         for (let rule of this.rules) {
             // check each condition and count the fulfilled ones
             let fulfilledConditions = 0;
+
             for (let condition of rule.conditions) {
                 const operator = operators[condition.operator];
-                if (operator(facts[condition.fact], condition.value)) {
-                    fulfilledConditions++;
+                if (operator) {
+                    if (operator(facts[condition.fact], condition.value)) {
+                        fulfilledConditions++;
+                    }
+                } else {
+                    console.error('No operator found!', condition);
                 }
             }
 
