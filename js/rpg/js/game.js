@@ -350,7 +350,7 @@ class Player extends MovingObject {
             this.interacting = false;
             for (let entity of entities) {
                 if (typeof entity.interact === 'function' && this.interactionRect.collideObject(entity)) {
-                    entity.interact(this);
+                    entity.interact(this, entities);
                 }
             }
 
@@ -411,6 +411,7 @@ class TileSet {
             new Frame(96+48, 96, 16, 16, 0, 0), new Frame(112+48, 96, 16, 16, 0, 0), new Frame(128+48, 96, 16, 16, 0, 0), // spider-right
             new Frame(96+48, 112, 16, 16, 0, 0), new Frame(112+48, 112, 16, 16, 0, 0), new Frame(128+48, 112, 16, 16, 0, 0), // spider-up
             new Frame(144, 176, 16, 16, 0, 0), // spider-dead
+            new Frame(0, 192, 16, 16, 0, 0), new Frame(16, 192, 16, 16, 0, 0), new Frame(32, 192, 16, 16, 0, 0), new Frame(48, 192, 16, 16, 0, 0), new Frame(64, 192, 16, 16, 0, 0), new Frame(80, 192, 16, 16, 0, 0) // corn
         ];
     }
 }
@@ -499,6 +500,8 @@ class World {
                 this.entities.push(new SimpleAnimated(entity.x * this.tileSet.tileSize, entity.y * this.tileSet.tileSize, [19, 20, 21], 6));
             else if (entity.type === 'chest')
                 this.entities.push(new Chest(entity.x * this.tileSet.tileSize, entity.y * this.tileSet.tileSize));
+            else if (entity.type === 'corn')
+                this.entities.push(new Corn(entity.x * this.tileSet.tileSize, entity.y * this.tileSet.tileSize));
         }
 
         for (let door of zone.doors) {
