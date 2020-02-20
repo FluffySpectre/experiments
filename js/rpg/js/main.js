@@ -80,6 +80,15 @@ window.addEventListener('load', function (event) {
                 enemy.y + frame.offsetY, frame.width, frame.height);
         }
 
+        for (let entity of game.world.entities) {
+            frame = game.world.tileSet.frames[entity.animator.frameValue];
+
+            display.drawObject(assetsManager.tileSetImage,
+                frame.x, frame.y,
+                entity.x + frame.offsetX,
+                entity.y + frame.offsetY, frame.width, frame.height);
+        }
+
         frame = game.world.tileSet.frames[game.world.player.animator.frameValue];
 
         display.drawObject(assetsManager.tileSetImage,
@@ -89,15 +98,6 @@ window.addEventListener('load', function (event) {
 
         // DEBUG
         // display.drawRect(game.world.player.interactionRect.x, game.world.player.interactionRect.y, game.world.player.interactionRect.width, game.world.player.interactionRect.height, 'rgba(255, 0, 0, 0.5)');
-
-        for (let entity of game.world.entities) {
-            frame = game.world.tileSet.frames[entity.animator.frameValue];
-
-            display.drawObject(assetsManager.tileSetImage,
-                frame.x, frame.y,
-                entity.x + frame.offsetX,
-                entity.y + frame.offsetY, frame.width, frame.height);
-        }
 
         display.render();
     }
