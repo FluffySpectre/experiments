@@ -231,7 +231,7 @@ class Player extends MovingObject {
         this.damage = 10;
         this.health = 100;
 
-        this.interactionRect = new GameObject(x, y, 16, 16);
+        this.interactionRect = new GameObject(x, y, 8, 8);
     }
 
     moveDown() {
@@ -332,16 +332,16 @@ class Player extends MovingObject {
 
         // update interaction rectangle position
         if (this.direction === 0) {
-            this.interactionRect.x = this.x - this.interactionRect.width / 4;
+            this.interactionRect.x = this.x;
             this.interactionRect.y = this.y + 16;
         } else if (this.direction === 1) {
-            this.interactionRect.y = this.y;
+            this.interactionRect.y = this.y + 4;
             this.interactionRect.x = this.x - this.interactionRect.width;
         } else if (this.direction === 2) {
-            this.interactionRect.y = this.y;
-            this.interactionRect.x = this.x + this.interactionRect.width / 2;
+            this.interactionRect.y = this.y + 4;
+            this.interactionRect.x = this.x + this.interactionRect.width;
         } else if (this.direction === 3) {
-            this.interactionRect.x = this.x - this.interactionRect.width / 4;
+            this.interactionRect.x = this.x;
             this.interactionRect.y = this.y - this.interactionRect.height;
         }
 
