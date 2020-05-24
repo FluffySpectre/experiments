@@ -22,6 +22,11 @@
             float: left;
             padding: 2rem;
         }
+
+        textarea {
+            min-width: 20rem;
+            min-height: 10rem;
+        }
     </style>
 </head>
 
@@ -33,23 +38,37 @@
         Press 2: Electron Tail<br />
         Press 3: Conductor<br />
         Press 4: Empty cell<br />
-        
+
         <br />
 
         Click on a cell with the mouse to place.<br />
         Click and drag the mouse for fast placing.
         <br /><br />
 
-        Press C to clear the field.<br /><br/>
+        Press C to clear the field.<br /><br />
 
         Press Space to toggle the simulation.
+
+        <br /><br />
+
+        Load state from JSON:<br />
+        <textarea id="jsonCode" placeholder="e.g. [{ row: 1, column: 2, state: 1 }, ...]"></textarea><br />
+        <button id="loadCode">Load</button>
+
+        <br /><br />
+
+        Export current state to JSON:<br />
+        <textarea id="exportJsonCode"></textarea><br />
+        <button id="exportCode">Export</button>
     </div>
 
     <script>
+        const loadCodeTextArea = document.getElementById('jsonCode');
+        const exportCodeTextArea = document.getElementById('exportJsonCode');
         let canvas = document.getElementById('field');
         let ctx = canvas.getContext('2d');
 
-        const cellSize = 32;
+        const cellSize = 16;
         const columns = Math.floor(canvas.width / cellSize);
         const rows = Math.floor(canvas.height / cellSize);
         let cells; // 0 = empty, 1 = electron head, 2 = electron tail, 3 = conductor
@@ -61,12 +80,50 @@
         let placingInput = false;
         let placingElement = 1;
 
+        // cell states
+        const CellState = {
+            Empty: 0,
+            Conductor: 1,
+            ElectronHead: 2,
+            ElectronTail: 3,
+        };
+
+        function loadCodeFromTextarea() {
+            try {
+                const code = JSON.parse(loadCodeTextArea.value);
+                if (code)
+                    parseCode(code);
+            } catch (e) {
+                console.error('Code not valid!', e);
+            }
+        }
+
+        function parseCode(code) {
+            cells = createEmptyArray();
+            for (let cell of code) {
+                cells[cell.column][cell.row] = cell.state;
+            }
+        }
+
+        function exportCode() {
+            let e = [];
+            for (let x = 0; x < columns; x++) {
+                for (let y = 0; y < rows; y++) {
+                    const cell = cells[x][y];
+
+                    if (cell > 0)
+                        e.push({ column: x, row: y, state: cell });
+                }
+            }
+            exportCodeTextArea.value = JSON.stringify(e);
+        }
+
         function createEmptyArray() {
             let arr = [];
             for (let x = 0; x < columns; x++) {
                 arr.push([]);
                 for (let y = 0; y < rows; y++) {
-                    arr[x].push(0);
+                    arr[x].push(CellState.Empty);
                 }
             }
             return arr;
@@ -74,6 +131,13 @@
 
         function setup() {
             cells = createEmptyArray();
+
+            document.getElementById('loadCode').addEventListener('click', (e) => {
+                loadCodeFromTextarea();
+            });
+            document.getElementById('exportCode').addEventListener('click', (e) => {
+                exportCode();
+            });
 
             document.addEventListener('mousedown', (e) => {
                 placingInput = true;
@@ -94,13 +158,13 @@
                 if (e.code === 'Space') {
                     running = !running;
                 } else if (e.code === 'Digit1') {
-                    placingElement = 1;
+                    placingElement = CellState.ElectronHead;
                 } else if (e.code === 'Digit2') {
-                    placingElement = 2;
+                    placingElement = CellState.ElectronTail;
                 } else if (e.code === 'Digit3') {
-                    placingElement = 3;
+                    placingElement = CellState.Conductor;
                 } else if (e.code === 'Digit4') {
-                    placingElement = 0;
+                    placingElement = CellState.Empty;
                 } else if (e.code === 'KeyC') {
                     reset();
                 }
@@ -129,10 +193,10 @@
                             const cell = cells[x][y];
 
                             if (cell > 0) { // not empty
-                                if (cell === 1) { // head to tail
-                                    nextGenCells[x][y] = 2;
-                                } else if (cell === 2) { // tail to conductor
-                                    nextGenCells[x][y] = 3;
+                                if (cell === CellState.ElectronHead) { // head to tail
+                                    nextGenCells[x][y] = CellState.ElectronTail;
+                                } else if (cell === CellState.ElectronTail) { // tail to conductor
+                                    nextGenCells[x][y] = CellState.Conductor;
                                 } else {
                                     // conductor to head, if the cell has 1 or 2 neighboring heads
                                     let numNeighborHeads = 0;
@@ -143,7 +207,7 @@
 
                                             if (!(neighborX === x && neighborY === y)) {
                                                 if (cells[neighborX] !== undefined) {
-                                                    if (cells[neighborX][neighborY] === 1)
+                                                    if (cells[neighborX][neighborY] === CellState.ElectronHead)
                                                         numNeighborHeads++;
                                                 }
                                             }
@@ -151,7 +215,7 @@
                                     }
 
                                     if (numNeighborHeads === 1 || numNeighborHeads === 2) {
-                                        nextGenCells[x][y] = 1;
+                                        nextGenCells[x][y] = CellState.ElectronHead;
                                     } else {
                                         // the cell doesn't change
                                         nextGenCells[x][y] = cell;
@@ -187,11 +251,11 @@
 
             for (let x = 0; x < columns; x++) {
                 for (let y = 0; y < rows; y++) {
-                    if (cells[x][y] === 1) {
+                    if (cells[x][y] === CellState.ElectronHead) {
                         ctx.fillStyle = 'blue';
-                    } else if (cells[x][y] === 2) {
+                    } else if (cells[x][y] === CellState.ElectronTail) {
                         ctx.fillStyle = 'red';
-                    } else if (cells[x][y] === 3) {
+                    } else if (cells[x][y] === CellState.Conductor) {
                         ctx.fillStyle = 'yellow';
                     } else {
                         ctx.fillStyle = 'black';
