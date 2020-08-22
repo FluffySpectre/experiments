@@ -1,0 +1,14 @@
+{
+  "name": "lightpanels-parcel-tracker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "dependencies": {
+    "dotenv": "8.2.0",
+    "node-fetch": "2.6.0"
+  },
+  "devDependencies": {},
+  "scripts": {},
+  "author": "Björn Bosse",
+  "license": "ISC"
+}
