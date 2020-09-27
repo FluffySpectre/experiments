@@ -16,5 +16,5 @@ public class Transformation
 [System.Serializable]
 public class StepData
 {
-    public Transformation[] transformations;
+    public List<Transformation> transformations = new List<Transformation>();
 }
