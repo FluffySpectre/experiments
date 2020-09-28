@@ -8,6 +8,8 @@ public class UIStepSelection : MonoBehaviour
     public GameObject stepButtonPrefab;
     public StepManager stepManager;
 
+    private int selectedStep = -1;
+
     void OnEnable()
     {
         EventHandler.StepCreatedEvent += OnStepCreated;
@@ -25,7 +27,24 @@ public class UIStepSelection : MonoBehaviour
         var button = buttonObj.GetComponent<Button>();
         button.GetComponentInChildren<Text>().text = "Step " + (index + 1);
         button.onClick.AddListener(() => {
+            HighlightButton(index);
+
             stepManager.TransitionToStep(index);
         });
+        HighlightButton(index);
+    }
+
+    void HighlightButton(int index)
+    {
+        if (selectedStep > -1)
+        {
+            var oldButton = transform.GetChild(selectedStep);
+            oldButton.Find("Highlight").GetComponent<Image>().enabled = false;
+        }
+        
+        var newButton = transform.GetChild(index);
+        newButton.Find("Highlight").GetComponent<Image>().enabled = true;
+
+        selectedStep = index;
     }
 }
