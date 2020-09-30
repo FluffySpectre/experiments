@@ -32,6 +32,8 @@ public class UIStepSelection : MonoBehaviour
             stepManager.TransitionToStep(index);
         });
         HighlightButton(index);
+
+        stepManager.TransitionToStep(index);
     }
 
     void HighlightButton(int index)
@@ -41,7 +43,7 @@ public class UIStepSelection : MonoBehaviour
             var oldButton = transform.GetChild(selectedStep);
             oldButton.Find("Highlight").GetComponent<Image>().enabled = false;
         }
-        
+
         var newButton = transform.GetChild(index);
         newButton.Find("Highlight").GetComponent<Image>().enabled = true;
 

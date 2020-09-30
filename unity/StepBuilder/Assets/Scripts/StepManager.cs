@@ -19,14 +19,21 @@ public class StepManager : MonoBehaviour
         EventHandler.TransformableChangedEvent -= OnTransformableChanged;
     }
 
-    private void OnTransformableChanged(Transform trans, Vector3 position, Quaternion rotation)
+    void Start()
+    {
+        CreateStep();
+    }
+
+    private void OnTransformableChanged(Transform trans, Vector3 position, Quaternion rotation, Vector3 scale)
     {
         string transformPath = GetTransformPath(trans);
+
         var transformations = steps[stepIndex].transformations.FindAll(t => t.transformPath == transformPath);
         foreach (var tr in transformations)
         {
             tr.position = position;
             tr.rotation = rotation;
+            tr.scale = scale;
         }
     }
 
@@ -51,13 +58,14 @@ public class StepManager : MonoBehaviour
         StepData newStep = new StepData();
         
         // iterate over all transformable parts
-        var transformableObjects = GameObject.FindGameObjectsWithTag("Transformable");
+        var transformableObjects = FindObjectsOfType<Transformable>();
         foreach (var t in transformableObjects)
         {
             Transformation transformation = new Transformation();
             transformation.transformPath = GetTransformPath(t.transform);
             transformation.position = t.transform.position;
             transformation.rotation = t.transform.localRotation;
+            transformation.scale = t.transform.localScale;
             newStep.transformations.Add(transformation);
         }
 
@@ -83,6 +91,10 @@ public class StepManager : MonoBehaviour
             if (transformation.rotation != Transformation.ZERO_ROTATION)
             {
                 transitionAnimation = AnimationUtils.AddRotationAnimation(transitionAnimation, transformation.transformPath, targetTransform.localRotation, transformation.rotation);
+            }
+            if (transformation.scale != Transformation.ZERO_SCALE)
+            {
+                transitionAnimation = AnimationUtils.AddScaleAnimation(transitionAnimation, transformation.transformPath, targetTransform.localScale, transformation.scale);
             }
         }
 

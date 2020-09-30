@@ -13,13 +13,13 @@ public static class EventHandler
         }
     }
 
-    public static event Action<Transform, Vector3, Quaternion> TransformableChangedEvent;
+    public static event Action<Transform, Vector3, Quaternion, Vector3> TransformableChangedEvent;
 
-    public static void CallTransformableChangedEvent(Transform trans, Vector3 position, Quaternion rotation)
+    public static void CallTransformableChangedEvent(Transform trans, Vector3 position, Quaternion rotation, Vector3 scale)
     {
         if (TransformableChangedEvent != null)
         {
-            TransformableChangedEvent(trans, position, rotation);
+            TransformableChangedEvent(trans, position, rotation, scale);
         }
     }
 }

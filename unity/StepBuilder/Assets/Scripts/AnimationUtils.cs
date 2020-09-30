@@ -34,6 +34,19 @@ public class AnimationUtils
         return animationClip;
     }
 
+    public static AnimationClip AddScaleAnimation(AnimationClip animationClip, string transformPath, Vector3 startScale, Vector3 targetScale)
+    {
+        AnimationCurve scaleX = AnimationCurve.EaseInOut(0.0f, startScale.x, 1.0f, targetScale.x);
+        AnimationCurve scaleY = AnimationCurve.EaseInOut(0.0f, startScale.y, 1.0f, targetScale.y);
+        AnimationCurve scaleZ = AnimationCurve.EaseInOut(0.0f, startScale.z, 1.0f, targetScale.z);
+        animationClip.legacy = true;
+        animationClip.SetCurve(transformPath, typeof(Transform), "localScale.x", scaleX);
+        animationClip.SetCurve(transformPath, typeof(Transform), "localScale.y", scaleY);
+        animationClip.SetCurve(transformPath, typeof(Transform), "localScale.z", scaleZ);
+
+        return animationClip;
+    }
+
     // private AnimationClip CreateRotationClip()
     // {
     //     Quaternion rot; //Quaternion we'll be storing the rotation in
