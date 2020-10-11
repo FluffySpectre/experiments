@@ -1,0 +1,12 @@
+{
+  "minMax": {
+    "SmartPositionMin": 2150,
+    "ClassicPositionMin": 7,
+    "DangerPositionMin": 0,
+    "GradePositionMin": 1439,
+    "SmartPositionMax": 2438,
+    "ClassicPositionMax": 11,
+    "DangerPositionMax": 190,
+    "GradePositionMax": 1573
+  }
+}
