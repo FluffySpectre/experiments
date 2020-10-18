@@ -8,5 +8,8 @@
     "ClassicPositionMax": 11,
     "DangerPositionMax": 190,
     "GradePositionMax": 1573
+  },
+  "playStats": {
+    "times_played": 0
   }
 }

@@ -1,7 +1,13 @@
 const fetch = require('node-fetch');
 const fs = require('fs');
 
-const myGameId = 225498;
+let myEnv = null;
+try {
+    myEnv = JSON.parse(fs.readFileSync('.env'));
+} catch (e) {
+    logInfo('ERROR: No .env-file found!');
+}
+
 const apiUrl = 'https://api.ldjam.com/vx';
 const checkInterval = 60000 * 10;
 
@@ -10,7 +16,8 @@ const dataLast = {
     Smart: null,
     Classic: null,
     Danger: null,
-    Grade: null
+    Grade: null,
+    PlayStats: null,
 };
 let minMax = {
     SmartPositionMin: Number.MAX_SAFE_INTEGER,
@@ -48,19 +55,20 @@ function loadSaves() {
         const saveJSON = JSON.parse(fs.readFileSync('save.json'));
         if (saveJSON) {
             minMax = saveJSON.minMax;
+            dataLast.PlayStats = saveJSON.playStats;
         }
     } catch (e) {}
 }
 
 function saveSaves() {
-    const saveJSON = JSON.stringify({ minMax }, null, 2);
+    const saveJSON = JSON.stringify({ minMax, playStats: dataLast.PlayStats }, null, 2);
     if (saveJSON) {
         fs.writeFileSync('save.json', saveJSON);
     }
 }
 
 function getGames(offset, limit, filter) {
-    return fetch(apiUrl + '/node/feed/212256/' + filter + '+parent/item/game/compo+jam?offset=' + offset + '&limit=' + limit)
+    return fetch(apiUrl + '/node/feed/' + myEnv.LDJamId + '/' + filter + '+parent/item/game/compo+jam?offset=' + offset + '&limit=' + limit)
         .then(checkStatus)
         .then(res => res.json());
 }
@@ -81,7 +89,7 @@ async function getRankInFilter(filter) {
 
         // find my game
         for (let i=0; i<games.feed.length; i++) {
-            if (games.feed[i].id == myGameId) {
+            if (games.feed[i].id == myEnv.GameId) {
                 data.position = (offset + i) + 1;
                 data.score = games.feed[i].score;
                 break;
@@ -107,6 +115,22 @@ function getDiffs(data, filterName) {
     }
 
     return { posDiff, scoreDiff };
+}
+
+async function getPlayStats() {
+    if (!myEnv || !myEnv.PlayStatsUrl) return;
+
+    const playStats = await fetch(myEnv.PlayStatsUrl)
+        .then(checkStatus)
+        .then(res => res.json())
+        .catch(e => {});
+    
+    if (playStats) {
+        if (!dataLast.PlayStats || dataLast.PlayStats.times_played !== playStats.times_played) {
+            dataLast.PlayStats = { times_played: playStats.times_played };
+            logInfo('\x1b[35m', 'Times played: ' + playStats.times_played);
+        }
+    }
 }
 
 async function doStuff() {
@@ -164,6 +188,9 @@ async function doStuff() {
     dataLast.Classic = dataClassic;
     dataLast.Danger = dataDanger;
     dataLast.Grade = dataGrade;
+
+    // update play stats
+    await getPlayStats();
 
     saveSaves();
 }
