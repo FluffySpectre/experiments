@@ -90,7 +90,7 @@ async function timerToggleActivation() {
 
 async function toggleActivation() {
     return new Promise(async resolve => {
-        const isOn = await lightpanelAPI.isLightpanelOn();
+        const isOn = await lightpanelAPI.isLightpanelOn().catch(e => {});
         if (!isOn) {
             if (isActive) {
                 isActive = false;
@@ -102,7 +102,7 @@ async function toggleActivation() {
             return;
         }
 
-        const activeEffect = await lightpanelAPI.getActiveEffect();
+        const activeEffect = await lightpanelAPI.getActiveEffect().catch(e => {});
 
         const newActive = activeEffect !== 'ThermoAus' && activeEffect === '*Static*' || activeEffect === 'Thermo' || activeEffect === 'ThermoKurz';
         let activationChanged = false;
@@ -122,7 +122,7 @@ async function toggleActivation() {
 
         if (activeEffect === 'ThermoAus' && lastRealScene) {
             activationTimeMs = -1;
-            lightpanelAPI.setLightpanelEffect(lastRealScene);
+            lightpanelAPI.setLightpanelEffect(lastRealScene).catch(e => {});
             isActive = false;
 
             logInfo('Switched back to scene:', lastRealScene);
@@ -136,7 +136,7 @@ async function toggleActivation() {
 
         if (isActive && activationTimeMs > -1 && new Date().getTime() > activationTimeMs + (shortDisplayDuration * 1000) && lastRealScene) {
             activationTimeMs = -1;
-            lightpanelAPI.setLightpanelEffect(lastRealScene);
+            lightpanelAPI.setLightpanelEffect(lastRealScene).catch(e => {});
             isActive = false;
 
             logInfo('Switched back to scene:', lastRealScene);
@@ -192,7 +192,7 @@ async function updateLightpanels() {
             }
         }
 
-        await lightpanelAPI.setLightpanelColors(indices, cols);
+        await lightpanelAPI.setLightpanelColors(indices, cols).catch(e => {});
 
         if (numActive !== numActiveLightpanels) {
             numActiveLightpanels = numActive;
