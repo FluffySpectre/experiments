@@ -60,7 +60,8 @@ class LightpanelAPI {
                 command: 'display',
                 animType: 'static',
                 animData: animData,
-                loop: false
+                loop: false,
+                palette: [],
             } 
         };
         return fetch(this.lightPanelAPIUrl + '/effects', {
