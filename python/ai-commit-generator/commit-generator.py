@@ -4,6 +4,7 @@ import subprocess
 import requests
 import argparse
 import sys
+import re
 import ollama
 
 class GitCommitGenerator:
@@ -42,6 +43,21 @@ class GitCommitGenerator:
         staged_files = self.get_staged_files()
         return len(staged_files) > 0
 
+    def filter_response(self, text: str) -> str:
+        """Removes unwanted parts from the generated message"""
+        # Remove <think> block
+        pattern = r'<think>.*?</think>'
+        filtered_text = re.sub(pattern, '', text, flags=re.IGNORECASE | re.DOTALL)
+        
+        # Remove code block markers
+        filtered_text = filtered_text.replace('```', '')
+
+        # Clean up any extra whitespace that might be left
+        filtered_text = re.sub(r'\n\s*\n', '\n', filtered_text)  # Remove multiple empty lines
+        filtered_text = filtered_text.strip()
+        
+        return filtered_text
+
     def generate_commit_message(self, diff: str) -> str:
         """Generate commit message using Ollama API"""
         prompt = f"""
@@ -57,7 +73,7 @@ Rules:
 Git diff:
 {diff}
 
-Generate only the commit message, no explanations and no formatting.
+Generate only the commit message, no explanations. Don't wrap the message in any additional formatting or tags.
 """
 
         try:
@@ -73,7 +89,11 @@ Generate only the commit message, no explanations and no formatting.
                 # format="json",
                 options={"temperature": 0.3, "top_p": 0.8},
             )
-            return response["message"]["content"].strip()
+            
+            raw_response = response["message"]["content"]
+            filtered_response = self.filter_response(raw_response)
+            
+            return filtered_response.strip()
 
         except requests.exceptions.RequestException as e:
             raise Exception(f"LLM API error: {e}")
