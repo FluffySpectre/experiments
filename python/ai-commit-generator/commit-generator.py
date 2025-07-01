@@ -57,7 +57,7 @@ Rules:
 Git diff:
 {diff}
 
-Generate only the commit message, no explanations:
+Generate only the commit message, no explanations and no formatting.
 """
 
         try:
